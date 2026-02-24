@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, Medal, Crown, Diamond, Clock, RefreshCw, Gift, Cpu } from 'lucide-react';
+import { Trophy, Medal, Crown, Diamond, Clock, RefreshCw, Gift, Cpu, Droplets } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LeaderboardEntry {
@@ -10,13 +10,6 @@ interface LeaderboardEntry {
   last_updated: string;
 }
 
-interface RewardTier {
-  rank_from: number;
-  rank_to: number;
-  reward_wld: number;
-  label: string;
-}
-
 interface SeasonData {
   id: string;
   name: string;
@@ -25,9 +18,10 @@ interface SeasonData {
   end_time: string;
   status: string;
   is_active: boolean;
-  reward_tiers: RewardTier[];
+  reward_tiers: unknown[];
   machine_pool_total?: number;
   machine_pool_remaining?: number;
+  revenue_wld?: number;
 }
 
 interface LeaderboardTabProps {
@@ -49,8 +43,23 @@ function formatDiamonds(n: number) {
   return n.toString();
 }
 
-function getRewardForRank(tiers: RewardTier[], rank: number): RewardTier | undefined {
-  return tiers.find((t) => rank >= t.rank_from && rank <= t.rank_to);
+function getRewardForRank(revenue: number, rank: number, totalPlayers: number): { wld: number; oil: number } {
+  if (rank === 1) return { wld: revenue * 0.50, oil: 0 };
+  if (rank === 2) return { wld: revenue * 0.30, oil: 0 };
+  if (rank === 3) return { wld: revenue * 0.15, oil: 0 };
+  if (rank >= 4 && rank <= 10) {
+    const count = Math.max(0, Math.min(totalPlayers, 10) - 3);
+    return { wld: count > 0 ? (revenue * 0.05) / count : 0, oil: 0 };
+  }
+  if (rank >= 11 && rank <= 20) return { wld: 0, oil: 1000 };
+  return { wld: 0, oil: 0 };
+}
+
+function formatWld(n: number): string {
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  if (n >= 1) return n.toFixed(2);
+  if (n > 0) return n.toFixed(4);
+  return '0';
 }
 
 const RANK_STYLES = [
@@ -154,6 +163,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
         profiles!inner(player_name)
       `)
       .eq('season_id', seasonId)
+      .eq('has_mega_machine', true)
       .order('diamonds_collected', { ascending: false })
       .limit(50);
 
@@ -184,8 +194,8 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
   }, [season]);
 
   const displaySeason = season || pastSeason;
-  const rewardTiers: RewardTier[] = (displaySeason?.reward_tiers ?? []) as RewardTier[];
   const isPast = !season && !!pastSeason;
+  const revenue = Number(displaySeason?.revenue_wld ?? 0);
 
   return (
     <div className="flex flex-col gap-4 pb-8 animate-fade-in">
@@ -203,7 +213,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                 {displaySeason?.name ?? 'Season Rankings'}
               </h2>
               <p className="text-xs text-muted-foreground font-pixel">
-                {isPast ? 'Season Ended' : 'Diamond Leaderboard'}
+                {isPast ? 'Season Ended' : 'Mega Machine Miners'}
               </p>
             </div>
           </div>
@@ -243,7 +253,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
         {displaySeason && (displaySeason.machine_pool_total ?? 0) > 0 && (
           <div className="flex items-center gap-2 mt-3 relative z-10">
             <Cpu className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-xs text-muted-foreground font-pixel">Machines:</span>
+            <span className="text-xs text-muted-foreground font-pixel">Mega Machines:</span>
             <div className="bg-orange-500/10 border border-orange-500/20 rounded px-2.5 py-0.5 flex items-center gap-1">
               <span className="font-pixel text-xs text-orange-300 font-bold">
                 {displaySeason.machine_pool_remaining ?? 0}
@@ -265,28 +275,37 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
         )}
       </div>
 
-      {/* Reward Tiers */}
-      {rewardTiers.length > 0 && (
+      {/* Prize Pool */}
+      {displaySeason && (
         <div className="rounded-xl border border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 to-amber-500/5 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Gift className="w-4 h-4 text-yellow-400" />
-            <span className="font-pixel text-xs text-yellow-300">Season Rewards</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Gift className="w-4 h-4 text-yellow-400" />
+              <span className="font-pixel text-xs text-yellow-300">Prize Pool</span>
+            </div>
+            <span className="font-pixel text-sm text-yellow-200 font-bold">{formatWld(revenue)} WLD</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {rewardTiers.map((tier, i) => (
+            {[
+              { label: '1st', pct: '50%', wld: formatWld(revenue * 0.50) },
+              { label: '2nd', pct: '30%', wld: formatWld(revenue * 0.30) },
+              { label: '3rd', pct: '15%', wld: formatWld(revenue * 0.15) },
+              { label: '4-10th', pct: '5%', wld: formatWld(revenue * 0.05) },
+            ].map((t) => (
               <div
-                key={i}
-                className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2 border border-yellow-500/10"
+                key={t.label}
+                className="flex items-center gap-1.5 bg-black/30 rounded-lg px-2.5 py-1.5 border border-yellow-500/10"
               >
-                <span className="font-pixel text-[10px] text-yellow-200">
-                  #{tier.rank_from}{tier.rank_to !== tier.rank_from ? `-${tier.rank_to}` : ''}
-                </span>
-                {tier.label && (
-                  <span className="text-[10px] text-muted-foreground">{tier.label}</span>
-                )}
-                <span className="font-pixel text-xs text-yellow-300 font-bold">{tier.reward_wld} WLD</span>
+                <span className="font-pixel text-[10px] text-yellow-200">{t.label}</span>
+                <span className="text-[9px] text-muted-foreground">({t.pct})</span>
+                <span className="font-pixel text-[10px] text-yellow-300 font-bold">{t.wld} WLD</span>
               </div>
             ))}
+            <div className="flex items-center gap-1.5 bg-black/30 rounded-lg px-2.5 py-1.5 border border-green-500/10">
+              <span className="font-pixel text-[10px] text-green-200">11-20th</span>
+              <Droplets className="w-3 h-3 text-green-400" />
+              <span className="font-pixel text-[10px] text-green-300 font-bold">1K Oil each</span>
+            </div>
           </div>
         </div>
       )}
@@ -332,8 +351,8 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
         <div className="flex flex-col items-center justify-center py-16 gap-4">
           <Diamond className="w-12 h-12 text-muted-foreground/40" />
           <p className="font-pixel text-sm text-muted-foreground text-center">
-            No miners ranked yet.
-            <br />Be the first to collect diamonds!
+            No mega machine miners yet.
+            <br />Buy a Mega Machine to join the leaderboard!
           </p>
         </div>
       )}
@@ -345,7 +364,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
             const isCurrentUser = entry.user_id === currentUserId;
             const isTop3 = entry.rank <= 3;
             const style = isTop3 ? RANK_STYLES[entry.rank - 1] : null;
-            const reward = getRewardForRank(rewardTiers, entry.rank);
+            const reward = getRewardForRank(revenue, entry.rank, entries.length);
 
             return (
               <div
@@ -382,15 +401,20 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                       </span>
                     )}
                   </div>
-                  {reward && !isTop3 && (
+                  {reward.wld > 0 && !isTop3 && entry.rank <= 10 && (
                     <span className="text-[9px] text-yellow-400 font-pixel">
-                      {reward.reward_wld} WLD reward
+                      {formatWld(reward.wld)} WLD reward
+                    </span>
+                  )}
+                  {reward.oil > 0 && (
+                    <span className="text-[9px] text-green-400 font-pixel">
+                      {formatDiamonds(reward.oil)} Oil reward
                     </span>
                   )}
                 </div>
 
                 {/* Top-3 prominent reward badge */}
-                {isTop3 && reward && (
+                {isTop3 && revenue > 0 && (
                   <div className={`shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1 border font-pixel ${
                     entry.rank === 1
                       ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-300'
@@ -399,7 +423,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                       : 'bg-orange-500/20 border-orange-400/40 text-orange-300'
                   }`}>
                     <Gift className="w-3 h-3" />
-                    <span className="text-xs font-bold">{reward.reward_wld} WLD</span>
+                    <span className="text-xs font-bold">{formatWld(reward.wld)} WLD</span>
                   </div>
                 )}
 

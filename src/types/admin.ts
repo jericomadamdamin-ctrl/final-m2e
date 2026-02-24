@@ -53,6 +53,7 @@ export interface Season {
     reward_count?: number;
     machine_pool_total?: number;
     machine_pool_remaining?: number;
+    revenue_wld?: number;
 }
 
 export interface SeasonReward {
@@ -62,6 +63,7 @@ export interface SeasonReward {
     rank: number;
     diamonds_collected: number;
     reward_wld: number;
+    reward_oil?: number;
     status: 'pending' | 'paid' | 'failed';
     tx_hash?: string | null;
     created_at: string;

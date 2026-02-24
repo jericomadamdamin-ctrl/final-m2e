@@ -504,7 +504,7 @@ export async function seasonAdminList(accessKey: string) {
 
 export async function seasonAdminCreate(
   accessKey: string,
-  params: { name: string; description?: string; duration_hours: number; reward_tiers?: import('@/types/admin').SeasonRewardTier[]; machine_pool_total?: number },
+  params: { name: string; description?: string; duration_hours: number; machine_pool_total?: number },
 ) {
   return seasonAdmin(accessKey, 'create', params) as Promise<{
     ok: boolean;
@@ -551,4 +551,23 @@ export async function seasonAdminUpdate(
     ok: boolean;
     season: import('@/types/admin').Season;
   }>;
+}
+
+export async function seasonPayoutExecute(accessKey: string, seasonId: string) {
+  const headers = authHeaders() as Record<string, string>;
+  if (accessKey) headers['x-admin-key'] = accessKey;
+
+  const { data, error } = await supabase.functions.invoke('season-payout', {
+    headers,
+    body: { season_id: seasonId },
+  });
+  if (error) await handleFunctionError(error);
+  if (isEdgeErrorPayload(data)) throw new Error(data.error);
+  return data as {
+    ok: boolean;
+    season_id: string;
+    paid: number;
+    failed: number;
+    results: Array<{ id: string; rank: number; type: string; status: string; amount?: number; tx?: string; error?: string }>;
+  };
 }

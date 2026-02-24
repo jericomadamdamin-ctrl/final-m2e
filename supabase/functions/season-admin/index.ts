@@ -5,9 +5,16 @@ interface SeasonCreateBody {
   name: string;
   description?: string;
   duration_hours: number;
-  reward_tiers?: Array<{ rank_from: number; rank_to: number; reward_wld: number; label: string }>;
   machine_pool_total?: number;
 }
+
+const AUTO_REWARD_TIERS = [
+  { rank_from: 1, rank_to: 1, percentage: 50, reward_type: 'wld', label: '1st Place' },
+  { rank_from: 2, rank_to: 2, percentage: 30, reward_type: 'wld', label: '2nd Place' },
+  { rank_from: 3, rank_to: 3, percentage: 15, reward_type: 'wld', label: '3rd Place' },
+  { rank_from: 4, rank_to: 10, percentage: 5, reward_type: 'wld', label: 'Top 4-10' },
+  { rank_from: 11, rank_to: 20, percentage: 0, reward_type: 'oil', reward_oil: 1000, label: 'Top 11-20' },
+];
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -47,12 +54,14 @@ Deno.serve(async (req) => {
           const { count: totalPlayers } = await admin
             .from('seasonal_leaderboard')
             .select('*', { count: 'exact', head: true })
-            .eq('season_id', s.id);
+            .eq('season_id', s.id)
+            .eq('has_mega_machine', true);
 
           const { data: diamondAgg } = await admin
             .from('seasonal_leaderboard')
             .select('diamonds_collected')
-            .eq('season_id', s.id);
+            .eq('season_id', s.id)
+            .eq('has_mega_machine', true);
 
           const totalDiamonds = (diamondAgg ?? []).reduce(
             (sum: number, r: any) => sum + Number(r.diamonds_collected || 0),
@@ -78,7 +87,7 @@ Deno.serve(async (req) => {
 
     // ── CREATE ──
     if (action === 'create') {
-      const { name, description, duration_hours, reward_tiers, machine_pool_total } = body as SeasonCreateBody;
+      const { name, description, duration_hours, machine_pool_total } = body as SeasonCreateBody;
       if (!name || !duration_hours || duration_hours <= 0) {
         throw new Error('name and positive duration_hours are required');
       }
@@ -96,7 +105,7 @@ Deno.serve(async (req) => {
           end_time: endTime.toISOString(),
           is_active: false,
           status: 'draft',
-          reward_tiers: reward_tiers ?? [],
+          reward_tiers: AUTO_REWARD_TIERS,
           created_by: userId,
           machine_pool_total: poolTotal,
           machine_pool_remaining: poolTotal,
@@ -190,7 +199,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, season: updated });
     }
 
-    // ── DISTRIBUTE ──
+    // ── DISTRIBUTE ── (auto-calculated from revenue)
     if (action === 'distribute') {
       const { season_id } = body;
       if (!season_id) throw new Error('Missing season_id');
@@ -206,27 +215,28 @@ Deno.serve(async (req) => {
         throw new Error(`Cannot distribute rewards for season in "${season.status}" status. Season must be ended first.`);
       }
 
-      const rewardTiers = (season.reward_tiers ?? []) as Array<{
-        rank_from: number;
-        rank_to: number;
-        reward_wld: number;
-        label: string;
-      }>;
-
-      if (rewardTiers.length === 0) {
-        throw new Error('No reward tiers configured for this season');
-      }
-
-      const maxRank = Math.max(...rewardTiers.map((t) => t.rank_to));
+      const revenueWld = Number(season.revenue_wld ?? 0);
 
       const { data: topPlayers, error: lbErr } = await admin
         .from('seasonal_leaderboard')
         .select('user_id, diamonds_collected')
         .eq('season_id', season_id)
+        .eq('has_mega_machine', true)
         .order('diamonds_collected', { ascending: false })
-        .limit(maxRank);
+        .limit(20);
 
       if (lbErr) throw lbErr;
+
+      const players = topPlayers ?? [];
+
+      // Fixed percentage tiers for WLD distribution
+      const WLD_TIERS = [
+        { rank: 1, pct: 50 },
+        { rank: 2, pct: 30 },
+        { rank: 3, pct: 15 },
+      ];
+      const RANK_4_10_PCT = 5;
+      const OIL_REWARD = 1000;
 
       const rewards: Array<{
         season_id: string;
@@ -234,19 +244,41 @@ Deno.serve(async (req) => {
         rank: number;
         diamonds_collected: number;
         reward_wld: number;
+        reward_oil: number;
         status: string;
       }> = [];
 
-      (topPlayers ?? []).forEach((player: any, idx: number) => {
+      // Count how many players actually fall in rank 4-10
+      const rank4to10Count = Math.max(0, Math.min(players.length, 10) - 3);
+      const perPlayerRank4to10 = rank4to10Count > 0
+        ? revenueWld * RANK_4_10_PCT / 100 / rank4to10Count
+        : 0;
+
+      players.forEach((player: any, idx: number) => {
         const rank = idx + 1;
-        const tier = rewardTiers.find((t) => rank >= t.rank_from && rank <= t.rank_to);
-        if (tier) {
+        let rewardWld = 0;
+        let rewardOil = 0;
+
+        if (rank <= 3) {
+          const tier = WLD_TIERS.find((t) => t.rank === rank);
+          rewardWld = tier ? revenueWld * tier.pct / 100 : 0;
+        } else if (rank <= 10) {
+          rewardWld = perPlayerRank4to10;
+        } else if (rank <= 20) {
+          rewardOil = OIL_REWARD;
+        }
+
+        // Round WLD to 6 decimals to avoid floating-point dust
+        rewardWld = Math.round(rewardWld * 1e6) / 1e6;
+
+        if (rewardWld > 0 || rewardOil > 0) {
           rewards.push({
             season_id,
             user_id: player.user_id,
             rank,
             diamonds_collected: Number(player.diamonds_collected),
-            reward_wld: tier.reward_wld,
+            reward_wld: rewardWld,
+            reward_oil: rewardOil,
             status: 'pending',
           });
         }
@@ -265,7 +297,7 @@ Deno.serve(async (req) => {
         .update({ status: 'rewarded' })
         .eq('id', season_id);
 
-      return jsonResponse({ ok: true, rewards_created: rewards.length, rewards });
+      return jsonResponse({ ok: true, rewards_created: rewards.length, revenue_wld: revenueWld, rewards });
     }
 
     // ── LEADERBOARD ──
@@ -282,6 +314,7 @@ Deno.serve(async (req) => {
           profiles!inner(player_name, wallet_address)
         `)
         .eq('season_id', season_id)
+        .eq('has_mega_machine', true)
         .order('diamonds_collected', { ascending: false })
         .limit(100);
 

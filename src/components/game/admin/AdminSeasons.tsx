@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
   Trophy, Plus, Play, Square, Gift, Clock, Users, Diamond,
-  Loader2, ChevronDown, ChevronUp, Trash2, Crown, Medal, Cpu,
+  Loader2, ChevronDown, ChevronUp, Crown, Medal, Cpu,
 } from 'lucide-react';
 import {
   seasonAdminList,
@@ -15,10 +15,10 @@ import {
   seasonAdminEnd,
   seasonAdminDistribute,
   seasonAdminLeaderboard,
+  seasonPayoutExecute,
 } from '@/lib/backend';
 import type {
   Season,
-  SeasonRewardTier,
   SeasonLeaderboardEntry,
   SeasonReward,
   SeasonStatus,
@@ -64,11 +64,6 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
   const [createDesc, setCreateDesc] = useState('');
   const [createDays, setCreateDays] = useState(30);
   const [createMachinePool, setCreateMachinePool] = useState(0);
-  const [createTiers, setCreateTiers] = useState<SeasonRewardTier[]>([
-    { rank_from: 1, rank_to: 1, reward_wld: 5, label: '1st Place' },
-    { rank_from: 2, rank_to: 2, reward_wld: 3, label: '2nd Place' },
-    { rank_from: 3, rank_to: 3, reward_wld: 1, label: '3rd Place' },
-  ]);
 
   // Expanded season detail
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -105,7 +100,6 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
         name: createName.trim(),
         description: createDesc.trim() || undefined,
         duration_hours: createDays * 24,
-        reward_tiers: createTiers.filter((t) => t.reward_wld > 0),
         machine_pool_total: createMachinePool > 0 ? createMachinePool : 0,
       });
       toast({ title: 'Season created', description: `"${createName}" is ready to activate.` });
@@ -160,6 +154,23 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
     }
   };
 
+  const handlePayout = async (seasonId: string) => {
+    setActionLoading(seasonId + '-payout');
+    try {
+      const result = await seasonPayoutExecute(accessKey, seasonId);
+      toast({
+        title: 'Payouts executed',
+        description: `${result.paid} paid, ${result.failed} failed.`,
+      });
+      await loadSeasons();
+      if (expandedId === seasonId) await loadLeaderboard(seasonId);
+    } catch (err) {
+      toast({ title: 'Payout failed', description: getErrorMessage(err), variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const loadLeaderboard = async (seasonId: string) => {
     setLbLoading(true);
     try {
@@ -180,20 +191,6 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
       setExpandedId(seasonId);
       loadLeaderboard(seasonId);
     }
-  };
-
-  const addTier = () => {
-    const last = createTiers[createTiers.length - 1];
-    const nextFrom = last ? last.rank_to + 1 : 1;
-    setCreateTiers([...createTiers, { rank_from: nextFrom, rank_to: nextFrom + 4, reward_wld: 0.5, label: '' }]);
-  };
-
-  const removeTier = (idx: number) => {
-    setCreateTiers(createTiers.filter((_, i) => i !== idx));
-  };
-
-  const updateTier = (idx: number, field: keyof SeasonRewardTier, value: string | number) => {
-    setCreateTiers(createTiers.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
   };
 
   const activeSeason = seasons.find((s) => s.status === 'active');
@@ -235,19 +232,18 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
               {(activeSeason.machine_pool_total ?? 0) > 0 && (
                 <div className="flex items-center gap-1 text-orange-400">
                   <Cpu className="w-3 h-3" />
-                  {activeSeason.machine_pool_remaining ?? 0}/{activeSeason.machine_pool_total} machines
+                  {activeSeason.machine_pool_remaining ?? 0}/{activeSeason.machine_pool_total} mega machines
                 </div>
               )}
             </div>
-            {activeSeason.reward_tiers.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {activeSeason.reward_tiers.map((t, i) => (
-                  <span key={i} className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">
-                    #{t.rank_from}{t.rank_to !== t.rank_from ? `-${t.rank_to}` : ''}: {t.reward_wld} WLD
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="text-[10px] bg-green-500/10 text-green-300 border border-green-500/20 rounded px-2 py-0.5 font-bold">
+                Revenue: {Number(activeSeason.revenue_wld ?? 0).toFixed(2)} WLD
+              </span>
+              <span className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">
+                1st: 50% | 2nd: 30% | 3rd: 15% | 4-10: 5% | 11-20: 1K Oil
+              </span>
+            </div>
             <Button
               size="sm"
               variant="destructive"
@@ -306,7 +302,7 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs">Machine Pool (0 = unlimited)</Label>
+              <Label className="text-xs">Mega Machine Pool (0 = unlimited)</Label>
               <Input
                 type="number"
                 min={0}
@@ -315,59 +311,19 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                 className="bg-black/40 text-sm h-9 w-40"
                 placeholder="0 = unlimited"
               />
-              <p className="text-[10px] text-muted-foreground">Total machines available for purchase this season. Set to 0 for no limit.</p>
+              <p className="text-[10px] text-muted-foreground">Total mega machines available for purchase this season. Set to 0 for no limit.</p>
             </div>
 
-            {/* Reward Tiers */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Reward Tiers</Label>
-                <Button type="button" size="sm" variant="ghost" onClick={addTier} className="h-6 text-[10px] px-2">
-                  <Plus className="w-3 h-3 mr-1" /> Add Tier
-                </Button>
+            {/* Auto Reward Info */}
+            <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/10 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Gift className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-xs font-bold text-yellow-300">Automatic Rewards</span>
               </div>
-              <div className="space-y-2">
-                {createTiers.map((tier, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-black/20 rounded-lg p-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground w-4">#</span>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={tier.rank_from}
-                        onChange={(e) => updateTier(idx, 'rank_from', Number(e.target.value))}
-                        className="bg-black/40 h-7 w-14 text-xs text-center p-1"
-                      />
-                      <span className="text-[10px] text-muted-foreground">-</span>
-                      <Input
-                        type="number"
-                        min={tier.rank_from}
-                        value={tier.rank_to}
-                        onChange={(e) => updateTier(idx, 'rank_to', Number(e.target.value))}
-                        className="bg-black/40 h-7 w-14 text-xs text-center p-1"
-                      />
-                    </div>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={tier.reward_wld}
-                      onChange={(e) => updateTier(idx, 'reward_wld', Number(e.target.value))}
-                      className="bg-black/40 h-7 w-20 text-xs p-1"
-                      placeholder="WLD"
-                    />
-                    <Input
-                      value={tier.label}
-                      onChange={(e) => updateTier(idx, 'label', e.target.value)}
-                      className="bg-black/40 h-7 flex-1 text-xs p-1"
-                      placeholder="Label"
-                    />
-                    <Button type="button" size="sm" variant="ghost" onClick={() => removeTier(idx)} className="h-7 w-7 p-0 text-destructive/60 hover:text-destructive">
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Rewards are calculated automatically from mega machine purchase revenue:
+                1st 50% | 2nd 30% | 3rd 15% | 4-10th 5% (split) | 11-20th 1,000 Oil each.
+              </p>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -421,9 +377,15 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                         {season.machine_pool_remaining ?? 0}/{season.machine_pool_total}
                       </span>
                     )}
+                    {(season.revenue_wld ?? 0) > 0 && (
+                      <span className="flex items-center gap-1 text-green-400">
+                        <Gift className="w-3 h-3" />
+                        {Number(season.revenue_wld).toFixed(2)} WLD
+                      </span>
+                    )}
                     {season.reward_count ? (
                       <span className="flex items-center gap-1">
-                        <Gift className="w-3 h-3" />
+                        <Crown className="w-3 h-3" />
                         {season.reward_count} rewards
                       </span>
                     ) : null}
@@ -456,6 +418,18 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                       Distribute
                     </Button>
                   )}
+                  {season.status === 'rewarded' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePayout(season.id)}
+                      disabled={actionLoading === season.id + '-payout'}
+                      className="h-7 text-[10px] border-green-500/30 text-green-400 hover:bg-green-500/10"
+                    >
+                      {actionLoading === season.id + '-payout' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Diamond className="w-3 h-3 mr-1" />}
+                      Pay Rewards
+                    </Button>
+                  )}
                 </div>
 
                 {expandedId === season.id ? (
@@ -468,23 +442,28 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
               {/* Expanded Detail */}
               {expandedId === season.id && (
                 <div className="border-t border-white/5 p-4 space-y-4">
-                  {/* Reward Tiers */}
-                  {season.reward_tiers.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-bold">Reward Tiers</div>
-                      <div className="flex flex-wrap gap-2">
-                        {season.reward_tiers.map((t, i) => (
-                          <div key={i} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-1.5 text-xs">
-                            <span className="text-yellow-300 font-bold">
-                              #{t.rank_from}{t.rank_to !== t.rank_from ? `-${t.rank_to}` : ''}
-                            </span>
-                            <span className="text-muted-foreground mx-1">{t.label || ''}</span>
-                            <span className="text-yellow-200 font-bold">{t.reward_wld} WLD</span>
-                          </div>
-                        ))}
+                  {/* Revenue & Reward Breakdown */}
+                  <div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-bold">Revenue & Rewards</div>
+                    <div className="bg-black/20 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Total Revenue</span>
+                        <span className="text-xs text-green-300 font-bold">{Number(season.revenue_wld ?? 0).toFixed(2)} WLD</span>
                       </div>
+                      {(() => {
+                        const rev = Number(season.revenue_wld ?? 0);
+                        return (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <span className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">1st: {(rev * 0.50).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-slate-500/10 text-slate-300 border border-slate-500/20 rounded px-2 py-0.5">2nd: {(rev * 0.30).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-orange-500/10 text-orange-300 border border-orange-500/20 rounded px-2 py-0.5">3rd: {(rev * 0.15).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded px-2 py-0.5">4-10th: {(rev * 0.05).toFixed(2)} WLD (split)</span>
+                            <span className="text-[10px] bg-green-500/10 text-green-300 border border-green-500/20 rounded px-2 py-0.5">11-20th: 1K Oil each</span>
+                          </div>
+                        );
+                      })()}
                     </div>
-                  )}
+                  </div>
 
                   {/* Leaderboard */}
                   <div>
@@ -510,13 +489,28 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                               <span className="flex-1 truncate">{entry.player_name}</span>
                               <span className="text-cyan-400 font-mono">{formatNumber(entry.diamonds_collected)}</span>
                               {reward && (
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${reward.status === 'paid'
-                                  ? 'bg-green-500/20 text-green-300'
-                                  : 'bg-yellow-500/20 text-yellow-300'
-                                  }`}>
-                                  {reward.reward_wld} WLD
-                                  {reward.status === 'paid' ? ' (paid)' : ''}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  {reward.reward_wld > 0 && (
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${reward.status === 'paid'
+                                      ? 'bg-green-500/20 text-green-300'
+                                      : reward.status === 'failed'
+                                      ? 'bg-red-500/20 text-red-300'
+                                      : 'bg-yellow-500/20 text-yellow-300'
+                                      }`}>
+                                      {Number(reward.reward_wld).toFixed(2)} WLD
+                                      {reward.status === 'paid' ? ' (paid)' : reward.status === 'failed' ? ' (failed)' : ''}
+                                    </span>
+                                  )}
+                                  {(reward.reward_oil ?? 0) > 0 && (
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${reward.status === 'paid'
+                                      ? 'bg-green-500/20 text-green-300'
+                                      : 'bg-emerald-500/20 text-emerald-300'
+                                      }`}>
+                                      {reward.reward_oil} Oil
+                                      {reward.status === 'paid' ? ' (paid)' : ''}
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
                           );

@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.season-admin]
 verify_jwt = false
+
+[functions.season-payout]
+verify_jwt = false

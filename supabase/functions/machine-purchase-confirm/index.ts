@@ -138,17 +138,19 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Check season machine pool before awarding
-        try {
-            const { data: poolAllowed, error: poolErr } = await admin.rpc('decrement_season_machine_pool');
-            if (poolErr) {
-                console.warn('[machine-purchase-confirm] pool check error:', poolErr.message);
-            } else if (poolAllowed === false) {
-                throw new Error('Season machine pool exhausted. No more machines available this season.');
+        // Mega machines: check season pool and register buyer on the leaderboard
+        if (purchase.machine_type === 'mega') {
+            try {
+                const { data: poolAllowed, error: poolErr } = await admin.rpc('decrement_season_machine_pool');
+                if (poolErr) {
+                    console.warn('[machine-purchase-confirm] pool check error:', poolErr.message);
+                } else if (poolAllowed === false) {
+                    throw new Error('Season mega machine pool exhausted. No more mega machines available this season.');
+                }
+            } catch (poolError) {
+                if ((poolError as Error).message.includes('pool exhausted')) throw poolError;
+                console.warn('[machine-purchase-confirm] pool check failed, allowing purchase:', (poolError as Error).message);
             }
-        } catch (poolError) {
-            if ((poolError as Error).message.includes('pool exhausted')) throw poolError;
-            console.warn('[machine-purchase-confirm] pool check failed, allowing purchase:', (poolError as Error).message);
         }
 
         // Award machine first using purchase.id as deterministic machine id.
@@ -197,6 +199,20 @@ Deno.serve(async (req) => {
 
         if (updateError) {
             throw new Error('Failed to confirm purchase record');
+        }
+
+        // Register mega machine buyer on the seasonal leaderboard and track revenue
+        if (purchase.machine_type === 'mega') {
+            try {
+                await admin.rpc('register_season_mega_buyer', { p_user_id: userId });
+            } catch (regErr) {
+                console.warn('[machine-purchase-confirm] register mega buyer failed:', (regErr as Error).message);
+            }
+            try {
+                await admin.rpc('increment_season_revenue', { p_amount: Number(purchase.amount_wld) });
+            } catch (revErr) {
+                console.warn('[machine-purchase-confirm] revenue tracking failed:', (revErr as Error).message);
+            }
         }
 
         logSecurityEvent({
