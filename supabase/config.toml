@@ -1,0 +1,46 @@
+project_id = "kinfgzrpwdoroahsnzbr"
+
+[functions.auth-nonce]
+verify_jwt = false
+
+[functions.auth-complete]
+verify_jwt = false
+
+[functions.worldid-verify]
+verify_jwt = false
+
+[functions.game-state]
+verify_jwt = false
+
+[functions.game-action]
+verify_jwt = false
+
+[functions.config-get]
+verify_jwt = false
+
+[functions.config-set]
+verify_jwt = false
+
+[functions.cashout-request]
+verify_jwt = false
+
+[functions.cashout-process]
+verify_jwt = false
+
+[functions.cashout-execute]
+verify_jwt = false
+
+[functions.profile-update]
+verify_jwt = false
+
+[functions.oil-purchase-initiate]
+verify_jwt = false
+
+[functions.oil-purchase-confirm]
+verify_jwt = false
+
+[functions.oil-purchase]
+verify_jwt = false
+
+[functions.season-admin]
+verify_jwt = false

@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 120 10% 4%;
+    --foreground: 80 100% 90%;
+
+    --card: 120 15% 8%;
+    --card-foreground: 80 100% 90%;
+
+    --popover: 120 15% 8%;
+    --popover-foreground: 80 100% 90%;
+
+    --primary: 84 81% 44%;
+    --primary-foreground: 120 10% 4%;
+
+    --secondary: 120 20% 15%;
+    --secondary-foreground: 80 100% 90%;
+
+    --muted: 120 15% 12%;
+    --muted-foreground: 80 30% 60%;
+
+    --accent: 45 100% 50%;
+    --accent-foreground: 120 10% 4%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 120 30% 20%;
+    --input: 120 20% 15%;
+    --ring: 84 81% 44%;
+
+    --radius: 0.75rem;
+
+    /* Custom game colors */
+    --neon-green: 84 81% 44%;
+    --neon-glow: 84 100% 50%;
+    --dark-green: 120 30% 10%;
+    --gem-bronze: 30 80% 45%;
+    --gem-silver: 210 10% 70%;
+    --gem-gold: 45 100% 50%;
+    --gem-iron: 220 15% 40%;
+    --gem-diamond: 195 100% 70%;
+    --oil-token: 35 100% 55%;
+    --world-coin: 210 100% 60%;
+
+    /* Gradients */
+    --gradient-card: linear-gradient(145deg, hsl(120 15% 10%), hsl(120 15% 6%));
+    --gradient-glow: linear-gradient(180deg, hsl(84 81% 44% / 0.3), transparent);
+    --gradient-header: linear-gradient(180deg, hsl(120 20% 8%), hsl(120 10% 4%));
+  }
+
+  .dark {
+    --background: 120 10% 4%;
+    --foreground: 80 100% 90%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-orbitron;
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .font-pixel {
+    font-family: 'Press Start 2P', cursive;
+  }
+
+  .font-orbitron {
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .glow-green {
+    box-shadow: 
+      0 0 10px hsl(84 81% 44% / 0.4),
+      0 0 20px hsl(84 81% 44% / 0.2),
+      inset 0 1px 0 hsl(84 100% 70% / 0.2);
+  }
+
+  .glow-green-strong {
+    box-shadow: 
+      0 0 15px hsl(84 81% 44% / 0.6),
+      0 0 30px hsl(84 81% 44% / 0.3),
+      0 0 45px hsl(84 81% 44% / 0.1);
+  }
+
+  .glow-gold {
+    box-shadow: 
+      0 0 10px hsl(45 100% 50% / 0.4),
+      0 0 20px hsl(45 100% 50% / 0.2);
+  }
+
+  .glow-diamond {
+    box-shadow: 
+      0 0 15px hsl(195 100% 70% / 0.5),
+      0 0 30px hsl(195 100% 70% / 0.3);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px hsl(84 81% 44% / 0.6);
+  }
+
+  .card-game {
+    background: linear-gradient(145deg, hsl(120 15% 10%), hsl(120 15% 6%));
+    border: 1px solid hsl(120 30% 20%);
+  }
+
+  .pixel-border {
+    border: 2px solid hsl(84 81% 44%);
+    box-shadow: 
+      inset 2px 2px 0 hsl(84 100% 60% / 0.3),
+      inset -2px -2px 0 hsl(84 50% 30% / 0.5);
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-sparkle {
+    animation: sparkle 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 10px hsl(84 81% 44% / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 20px hsl(84 81% 44% / 0.6), 0 0 30px hsl(84 81% 44% / 0.3);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  @keyframes sparkle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .gem-stone { color: hsl(30 10% 50%); }
+  .gem-bronze { color: hsl(30 80% 45%); }
+  .gem-silver { color: hsl(210 10% 70%); }
+  .gem-gold { color: hsl(45 100% 50%); }
+  .gem-iron { color: hsl(220 15% 50%); }
+  .gem-diamond { color: hsl(195 100% 70%); }
+
+  .bg-gem-stone { background-color: hsl(30 10% 50%); }
+  .bg-gem-bronze { background-color: hsl(30 80% 45%); }
+  .bg-gem-silver { background-color: hsl(210 10% 70%); }
+  .bg-gem-gold { background-color: hsl(45 100% 50%); }
+  .bg-gem-iron { background-color: hsl(220 15% 50%); }
+  .bg-gem-diamond { background-color: hsl(195 100% 70%); }
+}
