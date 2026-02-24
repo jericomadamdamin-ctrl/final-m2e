@@ -6,6 +6,7 @@ interface SeasonCreateBody {
   description?: string;
   duration_hours: number;
   reward_tiers?: Array<{ rank_from: number; rank_to: number; reward_wld: number; label: string }>;
+  machine_pool_total?: number;
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -77,11 +78,12 @@ Deno.serve(async (req) => {
 
     // ── CREATE ──
     if (action === 'create') {
-      const { name, description, duration_hours, reward_tiers } = body as SeasonCreateBody;
+      const { name, description, duration_hours, reward_tiers, machine_pool_total } = body as SeasonCreateBody;
       if (!name || !duration_hours || duration_hours <= 0) {
         throw new Error('name and positive duration_hours are required');
       }
 
+      const poolTotal = Math.max(0, Math.floor(machine_pool_total ?? 0));
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + duration_hours * 3600 * 1000);
 
@@ -96,6 +98,8 @@ Deno.serve(async (req) => {
           status: 'draft',
           reward_tiers: reward_tiers ?? [],
           created_by: userId,
+          machine_pool_total: poolTotal,
+          machine_pool_remaining: poolTotal,
         })
         .select('*')
         .single();
@@ -303,12 +307,12 @@ Deno.serve(async (req) => {
 
     // ── UPDATE ── (edit draft/active season details)
     if (action === 'update') {
-      const { season_id, name, description, reward_tiers, duration_hours } = body;
+      const { season_id, name, description, reward_tiers, duration_hours, machine_pool_total } = body;
       if (!season_id) throw new Error('Missing season_id');
 
       const { data: target } = await admin
         .from('seasons')
-        .select('status, start_time, end_time')
+        .select('status, start_time, end_time, machine_pool_total, machine_pool_remaining')
         .eq('id', season_id)
         .single();
 
@@ -324,6 +328,14 @@ Deno.serve(async (req) => {
       if (duration_hours !== undefined && duration_hours > 0) {
         const start = new Date(target.start_time);
         patch.end_time = new Date(start.getTime() + duration_hours * 3600 * 1000).toISOString();
+      }
+      if (machine_pool_total !== undefined) {
+        const newTotal = Math.max(0, Math.floor(machine_pool_total));
+        const oldTotal = Number(target.machine_pool_total ?? 0);
+        const oldRemaining = Number(target.machine_pool_remaining ?? 0);
+        const delta = newTotal - oldTotal;
+        patch.machine_pool_total = newTotal;
+        patch.machine_pool_remaining = Math.max(0, oldRemaining + delta);
       }
 
       const { data: updated, error } = await admin

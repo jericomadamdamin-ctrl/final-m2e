@@ -229,12 +229,55 @@ Deno.serve(async (req) => {
       });
 
       if (authError) {
-        // Use email filter instead of unfiltered listUsers to avoid pagination issues
-        const { data: users } = await admin.auth.admin.listUsers({ filter: email, perPage: 1 });
-        const existingUser = users?.users?.[0];
-        if (existingUser) {
-          userIdFromAuth = existingUser.id;
-        } else {
+        // createUser failed (likely "already registered"). Find the existing auth user
+        // via direct GoTrue admin API since the JS client's listUsers filter is unreliable.
+        let found = false;
+
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+          const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+          const res = await fetch(
+            `${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1&filter=${encodeURIComponent(email)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${serviceRoleKey}`,
+                apikey: serviceRoleKey,
+              },
+            },
+          );
+          if (res.ok) {
+            const body = await res.json();
+            const existingUser = body?.users?.[0];
+            if (existingUser?.id) {
+              userIdFromAuth = existingUser.id;
+              found = true;
+              console.log(`[AuthComplete] Found existing auth user via GoTrue API: ${userIdFromAuth}`);
+            }
+          }
+        } catch (e) {
+          console.warn('[AuthComplete] GoTrue API lookup failed:', (e as Error).message);
+        }
+
+        if (!found) {
+          // Last resort: paginate through listUsers to find the matching email
+          let page = 1;
+          const perPage = 50;
+          while (!found) {
+            const { data: usersPage, error: listErr } = await admin.auth.admin.listUsers({ page, perPage });
+            if (listErr || !usersPage?.users?.length) break;
+            const match = usersPage.users.find((u: any) => u.email === email);
+            if (match) {
+              userIdFromAuth = match.id;
+              found = true;
+              console.log(`[AuthComplete] Found existing auth user via listUsers page ${page}: ${userIdFromAuth}`);
+            }
+            if (usersPage.users.length < perPage) break;
+            page++;
+            if (page > 20) break; // safety limit
+          }
+        }
+
+        if (!found) {
           throw new Error('Failed to create auth user: ' + authError.message);
         }
       } else {

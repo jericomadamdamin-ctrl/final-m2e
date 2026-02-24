@@ -504,7 +504,7 @@ export async function seasonAdminList(accessKey: string) {
 
 export async function seasonAdminCreate(
   accessKey: string,
-  params: { name: string; description?: string; duration_hours: number; reward_tiers?: import('@/types/admin').SeasonRewardTier[] },
+  params: { name: string; description?: string; duration_hours: number; reward_tiers?: import('@/types/admin').SeasonRewardTier[]; machine_pool_total?: number },
 ) {
   return seasonAdmin(accessKey, 'create', params) as Promise<{
     ok: boolean;
@@ -545,7 +545,7 @@ export async function seasonAdminLeaderboard(accessKey: string, seasonId: string
 export async function seasonAdminUpdate(
   accessKey: string,
   seasonId: string,
-  params: { name?: string; description?: string; reward_tiers?: import('@/types/admin').SeasonRewardTier[]; duration_hours?: number },
+  params: { name?: string; description?: string; reward_tiers?: import('@/types/admin').SeasonRewardTier[]; duration_hours?: number; machine_pool_total?: number },
 ) {
   return seasonAdmin(accessKey, 'update', { season_id: seasonId, ...params }) as Promise<{
     ok: boolean;

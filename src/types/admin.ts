@@ -51,6 +51,8 @@ export interface Season {
     total_players?: number;
     total_diamonds?: number;
     reward_count?: number;
+    machine_pool_total?: number;
+    machine_pool_remaining?: number;
 }
 
 export interface SeasonReward {

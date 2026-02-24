@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, Medal, Crown, Diamond, Clock, RefreshCw, Gift } from 'lucide-react';
+import { Trophy, Medal, Crown, Diamond, Clock, RefreshCw, Gift, Cpu } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LeaderboardEntry {
@@ -26,6 +26,8 @@ interface SeasonData {
   status: string;
   is_active: boolean;
   reward_tiers: RewardTier[];
+  machine_pool_total?: number;
+  machine_pool_remaining?: number;
 }
 
 interface LeaderboardTabProps {
@@ -237,6 +239,23 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
           </div>
         )}
 
+        {/* Machines Available */}
+        {displaySeason && (displaySeason.machine_pool_total ?? 0) > 0 && (
+          <div className="flex items-center gap-2 mt-3 relative z-10">
+            <Cpu className="w-3.5 h-3.5 text-orange-400" />
+            <span className="text-xs text-muted-foreground font-pixel">Machines:</span>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded px-2.5 py-0.5 flex items-center gap-1">
+              <span className="font-pixel text-xs text-orange-300 font-bold">
+                {displaySeason.machine_pool_remaining ?? 0}
+              </span>
+              <span className="font-pixel text-[10px] text-muted-foreground">
+                / {displaySeason.machine_pool_total}
+              </span>
+            </div>
+            <span className="font-pixel text-[10px] text-muted-foreground">available</span>
+          </div>
+        )}
+
         {isPast && (
           <div className="mt-3 relative z-10">
             <span className="text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 rounded px-2 py-0.5 font-pixel uppercase">
@@ -363,12 +382,26 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                       </span>
                     )}
                   </div>
-                  {reward && (
+                  {reward && !isTop3 && (
                     <span className="text-[9px] text-yellow-400 font-pixel">
                       {reward.reward_wld} WLD reward
                     </span>
                   )}
                 </div>
+
+                {/* Top-3 prominent reward badge */}
+                {isTop3 && reward && (
+                  <div className={`shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1 border font-pixel ${
+                    entry.rank === 1
+                      ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-300'
+                      : entry.rank === 2
+                      ? 'bg-slate-400/20 border-slate-300/40 text-slate-200'
+                      : 'bg-orange-500/20 border-orange-400/40 text-orange-300'
+                  }`}>
+                    <Gift className="w-3 h-3" />
+                    <span className="text-xs font-bold">{reward.reward_wld} WLD</span>
+                  </div>
+                )}
 
                 {/* Diamonds */}
                 <div className="flex items-center gap-1.5 shrink-0">

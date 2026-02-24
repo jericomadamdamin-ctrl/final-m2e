@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
   Trophy, Plus, Play, Square, Gift, Clock, Users, Diamond,
-  Loader2, ChevronDown, ChevronUp, Trash2, Crown, Medal,
+  Loader2, ChevronDown, ChevronUp, Trash2, Crown, Medal, Cpu,
 } from 'lucide-react';
 import {
   seasonAdminList,
@@ -63,10 +63,11 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [createDays, setCreateDays] = useState(30);
+  const [createMachinePool, setCreateMachinePool] = useState(0);
   const [createTiers, setCreateTiers] = useState<SeasonRewardTier[]>([
     { rank_from: 1, rank_to: 1, reward_wld: 5, label: '1st Place' },
-    { rank_from: 2, rank_to: 3, reward_wld: 2, label: 'Runner Up' },
-    { rank_from: 4, rank_to: 10, reward_wld: 1, label: 'Top 10' },
+    { rank_from: 2, rank_to: 2, reward_wld: 3, label: '2nd Place' },
+    { rank_from: 3, rank_to: 3, reward_wld: 1, label: '3rd Place' },
   ]);
 
   // Expanded season detail
@@ -105,6 +106,7 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
         description: createDesc.trim() || undefined,
         duration_hours: createDays * 24,
         reward_tiers: createTiers.filter((t) => t.reward_wld > 0),
+        machine_pool_total: createMachinePool > 0 ? createMachinePool : 0,
       });
       toast({ title: 'Season created', description: `"${createName}" is ready to activate.` });
       setShowCreate(false);
@@ -230,6 +232,12 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                 <Diamond className="w-3 h-3" />
                 {formatNumber(activeSeason.total_diamonds ?? 0)}
               </div>
+              {(activeSeason.machine_pool_total ?? 0) > 0 && (
+                <div className="flex items-center gap-1 text-orange-400">
+                  <Cpu className="w-3 h-3" />
+                  {activeSeason.machine_pool_remaining ?? 0}/{activeSeason.machine_pool_total} machines
+                </div>
+              )}
             </div>
             {activeSeason.reward_tiers.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
@@ -295,6 +303,19 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                 onChange={(e) => setCreateDays(Number(e.target.value) || 1)}
                 className="bg-black/40 text-sm h-9 w-32"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Machine Pool (0 = unlimited)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={createMachinePool}
+                onChange={(e) => setCreateMachinePool(Number(e.target.value) || 0)}
+                className="bg-black/40 text-sm h-9 w-40"
+                placeholder="0 = unlimited"
+              />
+              <p className="text-[10px] text-muted-foreground">Total machines available for purchase this season. Set to 0 for no limit.</p>
             </div>
 
             {/* Reward Tiers */}
@@ -394,6 +415,12 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                       <Diamond className="w-3 h-3" />
                       {formatNumber(season.total_diamonds ?? 0)}
                     </span>
+                    {(season.machine_pool_total ?? 0) > 0 && (
+                      <span className="flex items-center gap-1 text-orange-400">
+                        <Cpu className="w-3 h-3" />
+                        {season.machine_pool_remaining ?? 0}/{season.machine_pool_total}
+                      </span>
+                    )}
                     {season.reward_count ? (
                       <span className="flex items-center gap-1">
                         <Gift className="w-3 h-3" />

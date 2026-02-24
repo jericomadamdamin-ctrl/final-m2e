@@ -138,6 +138,19 @@ Deno.serve(async (req) => {
             });
         }
 
+        // Check season machine pool before awarding
+        try {
+            const { data: poolAllowed, error: poolErr } = await admin.rpc('decrement_season_machine_pool');
+            if (poolErr) {
+                console.warn('[machine-purchase-confirm] pool check error:', poolErr.message);
+            } else if (poolAllowed === false) {
+                throw new Error('Season machine pool exhausted. No more machines available this season.');
+            }
+        } catch (poolError) {
+            if ((poolError as Error).message.includes('pool exhausted')) throw poolError;
+            console.warn('[machine-purchase-confirm] pool check failed, allowing purchase:', (poolError as Error).message);
+        }
+
         // Award machine first using purchase.id as deterministic machine id.
         // This makes retries idempotent if status update fails after crediting.
         let machine: any = null;
