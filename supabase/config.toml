@@ -42,6 +42,30 @@ verify_jwt = false
 [functions.oil-purchase]
 verify_jwt = false
 
+[functions.machine-purchase-initiate]
+verify_jwt = false
+
+[functions.machine-purchase-confirm]
+verify_jwt = false
+
+[functions.slot-purchase-initiate]
+verify_jwt = false
+
+[functions.slot-purchase-confirm]
+verify_jwt = false
+
+[functions.admin-db]
+verify_jwt = false
+
+[functions.admin-stats]
+verify_jwt = false
+
+[functions.admin-payment]
+verify_jwt = false
+
+[functions.admin-payment-verify]
+verify_jwt = false
+
 [functions.season-admin]
 verify_jwt = false
 
