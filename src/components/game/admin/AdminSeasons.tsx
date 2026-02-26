@@ -241,7 +241,7 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                 Revenue: {Number(activeSeason.revenue_wld ?? 0).toFixed(2)} WLD
               </span>
               <span className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">
-                1st: 50% | 2nd: 30% | 3rd: 15% | 4-10: 5% | 11-20: 1K Oil
+                1st: 40% | 2nd: 20% | 3rd: 10% | 4-10: 10💎 | 11-20: 1K Oil
               </span>
             </div>
             <Button
@@ -322,7 +322,7 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
                 Rewards are calculated automatically from mega machine purchase revenue:
-                1st 50% | 2nd 30% | 3rd 15% | 4-10th 5% (split) | 11-20th 1,000 Oil each.
+                1st 40% | 2nd 20% | 3rd 10% WLD | 4-10th 10 Diamonds each | 11-20th 1,000 Oil each. 30% revenue retained.
               </p>
             </div>
 
@@ -454,11 +454,12 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                         const rev = Number(season.revenue_wld ?? 0);
                         return (
                           <div className="flex flex-wrap gap-2 pt-1">
-                            <span className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">1st: {(rev * 0.50).toFixed(2)} WLD</span>
-                            <span className="text-[10px] bg-slate-500/10 text-slate-300 border border-slate-500/20 rounded px-2 py-0.5">2nd: {(rev * 0.30).toFixed(2)} WLD</span>
-                            <span className="text-[10px] bg-orange-500/10 text-orange-300 border border-orange-500/20 rounded px-2 py-0.5">3rd: {(rev * 0.15).toFixed(2)} WLD</span>
-                            <span className="text-[10px] bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded px-2 py-0.5">4-10th: {(rev * 0.05).toFixed(2)} WLD (split)</span>
+                            <span className="text-[10px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 rounded px-2 py-0.5">1st: {(rev * 0.40).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-slate-500/10 text-slate-300 border border-slate-500/20 rounded px-2 py-0.5">2nd: {(rev * 0.20).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-orange-500/10 text-orange-300 border border-orange-500/20 rounded px-2 py-0.5">3rd: {(rev * 0.10).toFixed(2)} WLD</span>
+                            <span className="text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 rounded px-2 py-0.5">4-10th: 10 Diamonds each</span>
                             <span className="text-[10px] bg-green-500/10 text-green-300 border border-green-500/20 rounded px-2 py-0.5">11-20th: 1K Oil each</span>
+                            <span className="text-[10px] bg-white/5 text-muted-foreground border border-white/10 rounded px-2 py-0.5">Retained: {(rev * 0.30).toFixed(2)} WLD (30%)</span>
                           </div>
                         );
                       })()}
@@ -499,6 +500,15 @@ export const AdminSeasons = ({ accessKey }: AdminSeasonsProps) => {
                                       }`}>
                                       {Number(reward.reward_wld).toFixed(2)} WLD
                                       {reward.status === 'paid' ? ' (paid)' : reward.status === 'failed' ? ' (failed)' : ''}
+                                    </span>
+                                  )}
+                                  {(reward.reward_diamonds ?? 0) > 0 && (
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${reward.status === 'paid'
+                                      ? 'bg-green-500/20 text-green-300'
+                                      : 'bg-cyan-500/20 text-cyan-300'
+                                      }`}>
+                                      {reward.reward_diamonds} 💎
+                                      {reward.status === 'paid' ? ' (paid)' : ''}
                                     </span>
                                   )}
                                   {(reward.reward_oil ?? 0) > 0 && (

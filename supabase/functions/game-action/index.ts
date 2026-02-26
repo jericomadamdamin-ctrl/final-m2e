@@ -145,12 +145,6 @@ Deno.serve(async (req) => {
 
       if (machine.level >= machineConfig.max_level) throw new Error('Machine at max level');
 
-      // Safeguard against invalid config
-      if (!config.progression?.upgrade_cost_multiplier) {
-        console.error('Missing upgrade_cost_multiplier in config');
-        throw new Error('Game config error: missing progression settings');
-      }
-
       const cost = getUpgradeCost(config, machine.type, machine.level);
 
       // Atomic Update

@@ -132,6 +132,48 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ── Diamond Payouts (ranks 4-10) ──
+        const { data: diamondRewards, error: diamondErr } = await admin
+            .from('season_rewards')
+            .select('id, user_id, rank, reward_diamonds')
+            .eq('season_id', season_id)
+            .eq('status', 'pending')
+            .gt('reward_diamonds', 0);
+
+        if (diamondErr) throw diamondErr;
+
+        for (const reward of (diamondRewards ?? [])) {
+            try {
+                const diamondAmount = Number(reward.reward_diamonds);
+
+                const { data: state } = await admin
+                    .from('player_state')
+                    .select('diamond_balance')
+                    .eq('user_id', reward.user_id)
+                    .single();
+
+                const newDiamonds = Number(state?.diamond_balance || 0) + diamondAmount;
+
+                const { error: updateErr } = await admin
+                    .from('player_state')
+                    .update({ diamond_balance: newDiamonds })
+                    .eq('user_id', reward.user_id);
+
+                if (updateErr) throw updateErr;
+
+                await admin
+                    .from('season_rewards')
+                    .update({ status: 'paid', paid_at: new Date().toISOString() })
+                    .eq('id', reward.id);
+
+                results.push({ id: reward.id, rank: reward.rank, type: 'diamonds', status: 'paid', amount: diamondAmount });
+            } catch (err) {
+                console.error(`[season-payout] Diamond payout failed for rank ${reward.rank}:`, err);
+                await admin.from('season_rewards').update({ status: 'failed' }).eq('id', reward.id);
+                results.push({ id: reward.id, rank: reward.rank, type: 'diamonds', status: 'failed', error: (err as Error).message });
+            }
+        }
+
         // ── Oil Payouts (ranks 11-20) ──
         const { data: oilRewards, error: oilErr } = await admin
             .from('season_rewards')

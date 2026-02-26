@@ -39,14 +39,9 @@ export const ROICalculator = ({ config }: ROICalculatorProps) => {
         // Multipliers
         const speedMult = 1 + Math.max(0, level - 1) * prog.level_speed_multiplier;
         const burnMult = 1 + Math.max(0, level - 1) * prog.level_oil_burn_multiplier;
-        // Cost Multiplier Logic: 
-        // Base cost is mConfig.cost_oil.
-        // Upgrade from L to L+1 is: base * L * upgrade_cost_multiplier.
-        // Total Investment = Base + Sum(Upgrade Costs).
-
         let totalOilCost = mConfig.cost_oil;
         for (let l = 1; l < level; l++) {
-            totalOilCost += Math.floor(mConfig.cost_oil * l * prog.upgrade_cost_multiplier);
+            totalOilCost += Math.floor(mConfig.cost_oil * Math.pow(2, l - 1));
         }
 
         const baseWldCost = mConfig.cost_wld || 0;

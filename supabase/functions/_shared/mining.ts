@@ -367,7 +367,7 @@ export function getTankCapacity(config: GameConfig, type: string, level: number)
 
 export function getUpgradeCost(config: GameConfig, type: string, level: number) {
   const base = config.machines[type]?.cost_oil ?? 0;
-  return Math.floor(base * level * config.progression.upgrade_cost_multiplier);
+  return Math.floor(base * Math.pow(2, level - 1));
 }
 
 // Helper to calculate total value for recycling (Base Cost + All Upgrades to current level)

@@ -64,6 +64,7 @@ export interface SeasonReward {
     diamonds_collected: number;
     reward_wld: number;
     reward_oil?: number;
+    reward_diamonds?: number;
     status: 'pending' | 'paid' | 'failed';
     tx_hash?: string | null;
     created_at: string;

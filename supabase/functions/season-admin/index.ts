@@ -9,10 +9,10 @@ interface SeasonCreateBody {
 }
 
 const AUTO_REWARD_TIERS = [
-  { rank_from: 1, rank_to: 1, percentage: 50, reward_type: 'wld', label: '1st Place' },
-  { rank_from: 2, rank_to: 2, percentage: 30, reward_type: 'wld', label: '2nd Place' },
-  { rank_from: 3, rank_to: 3, percentage: 15, reward_type: 'wld', label: '3rd Place' },
-  { rank_from: 4, rank_to: 10, percentage: 5, reward_type: 'wld', label: 'Top 4-10' },
+  { rank_from: 1, rank_to: 1, percentage: 40, reward_type: 'wld', label: '1st Place' },
+  { rank_from: 2, rank_to: 2, percentage: 20, reward_type: 'wld', label: '2nd Place' },
+  { rank_from: 3, rank_to: 3, percentage: 10, reward_type: 'wld', label: '3rd Place' },
+  { rank_from: 4, rank_to: 10, percentage: 0, reward_type: 'diamonds', reward_diamonds: 10, label: 'Top 4-10' },
   { rank_from: 11, rank_to: 20, percentage: 0, reward_type: 'oil', reward_oil: 1000, label: 'Top 11-20' },
 ];
 
@@ -229,13 +229,12 @@ Deno.serve(async (req) => {
 
       const players = topPlayers ?? [];
 
-      // Fixed percentage tiers for WLD distribution
       const WLD_TIERS = [
-        { rank: 1, pct: 50 },
-        { rank: 2, pct: 30 },
-        { rank: 3, pct: 15 },
+        { rank: 1, pct: 40 },
+        { rank: 2, pct: 20 },
+        { rank: 3, pct: 10 },
       ];
-      const RANK_4_10_PCT = 5;
+      const DIAMOND_REWARD_4_10 = 10;
       const OIL_REWARD = 1000;
 
       const rewards: Array<{
@@ -245,33 +244,28 @@ Deno.serve(async (req) => {
         diamonds_collected: number;
         reward_wld: number;
         reward_oil: number;
+        reward_diamonds: number;
         status: string;
       }> = [];
-
-      // Count how many players actually fall in rank 4-10
-      const rank4to10Count = Math.max(0, Math.min(players.length, 10) - 3);
-      const perPlayerRank4to10 = rank4to10Count > 0
-        ? revenueWld * RANK_4_10_PCT / 100 / rank4to10Count
-        : 0;
 
       players.forEach((player: any, idx: number) => {
         const rank = idx + 1;
         let rewardWld = 0;
         let rewardOil = 0;
+        let rewardDiamonds = 0;
 
         if (rank <= 3) {
           const tier = WLD_TIERS.find((t) => t.rank === rank);
           rewardWld = tier ? revenueWld * tier.pct / 100 : 0;
         } else if (rank <= 10) {
-          rewardWld = perPlayerRank4to10;
+          rewardDiamonds = DIAMOND_REWARD_4_10;
         } else if (rank <= 20) {
           rewardOil = OIL_REWARD;
         }
 
-        // Round WLD to 6 decimals to avoid floating-point dust
         rewardWld = Math.round(rewardWld * 1e6) / 1e6;
 
-        if (rewardWld > 0 || rewardOil > 0) {
+        if (rewardWld > 0 || rewardOil > 0 || rewardDiamonds > 0) {
           rewards.push({
             season_id,
             user_id: player.user_id,
@@ -279,6 +273,7 @@ Deno.serve(async (req) => {
             diamonds_collected: Number(player.diamonds_collected),
             reward_wld: rewardWld,
             reward_oil: rewardOil,
+            reward_diamonds: rewardDiamonds,
             status: 'pending',
           });
         }

@@ -43,16 +43,13 @@ function formatDiamonds(n: number) {
   return n.toString();
 }
 
-function getRewardForRank(revenue: number, rank: number, totalPlayers: number): { wld: number; oil: number } {
-  if (rank === 1) return { wld: revenue * 0.50, oil: 0 };
-  if (rank === 2) return { wld: revenue * 0.30, oil: 0 };
-  if (rank === 3) return { wld: revenue * 0.15, oil: 0 };
-  if (rank >= 4 && rank <= 10) {
-    const count = Math.max(0, Math.min(totalPlayers, 10) - 3);
-    return { wld: count > 0 ? (revenue * 0.05) / count : 0, oil: 0 };
-  }
-  if (rank >= 11 && rank <= 20) return { wld: 0, oil: 1000 };
-  return { wld: 0, oil: 0 };
+function getRewardForRank(revenue: number, rank: number, _totalPlayers: number): { wld: number; oil: number; diamonds: number } {
+  if (rank === 1) return { wld: revenue * 0.40, oil: 0, diamonds: 0 };
+  if (rank === 2) return { wld: revenue * 0.20, oil: 0, diamonds: 0 };
+  if (rank === 3) return { wld: revenue * 0.10, oil: 0, diamonds: 0 };
+  if (rank >= 4 && rank <= 10) return { wld: 0, oil: 0, diamonds: 10 };
+  if (rank >= 11 && rank <= 20) return { wld: 0, oil: 1000, diamonds: 0 };
+  return { wld: 0, oil: 0, diamonds: 0 };
 }
 
 function formatWld(n: number): string {
@@ -283,14 +280,13 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
               <Gift className="w-4 h-4 text-yellow-400" />
               <span className="font-pixel text-xs text-yellow-300">Prize Pool</span>
             </div>
-            <span className="font-pixel text-sm text-yellow-200 font-bold">{formatWld(revenue)} WLD</span>
+            <span className="font-pixel text-sm text-yellow-200 font-bold">{formatWld(revenue * 0.70)} WLD</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { label: '1st', pct: '50%', wld: formatWld(revenue * 0.50) },
-              { label: '2nd', pct: '30%', wld: formatWld(revenue * 0.30) },
-              { label: '3rd', pct: '15%', wld: formatWld(revenue * 0.15) },
-              { label: '4-10th', pct: '5%', wld: formatWld(revenue * 0.05) },
+              { label: '1st', pct: '40%', wld: formatWld(revenue * 0.40) },
+              { label: '2nd', pct: '20%', wld: formatWld(revenue * 0.20) },
+              { label: '3rd', pct: '10%', wld: formatWld(revenue * 0.10) },
             ].map((t) => (
               <div
                 key={t.label}
@@ -301,6 +297,11 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                 <span className="font-pixel text-[10px] text-yellow-300 font-bold">{t.wld} WLD</span>
               </div>
             ))}
+            <div className="flex items-center gap-1.5 bg-black/30 rounded-lg px-2.5 py-1.5 border border-cyan-500/10">
+              <span className="font-pixel text-[10px] text-cyan-200">4-10th</span>
+              <Diamond className="w-3 h-3 text-cyan-400" />
+              <span className="font-pixel text-[10px] text-cyan-300 font-bold">10 Diamonds each</span>
+            </div>
             <div className="flex items-center gap-1.5 bg-black/30 rounded-lg px-2.5 py-1.5 border border-green-500/10">
               <span className="font-pixel text-[10px] text-green-200">11-20th</span>
               <Droplets className="w-3 h-3 text-green-400" />
@@ -401,9 +402,14 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                       </span>
                     )}
                   </div>
-                  {reward.wld > 0 && !isTop3 && entry.rank <= 10 && (
+                  {reward.wld > 0 && !isTop3 && (
                     <span className="text-[9px] text-yellow-400 font-pixel">
                       {formatWld(reward.wld)} WLD reward
+                    </span>
+                  )}
+                  {reward.diamonds > 0 && (
+                    <span className="text-[9px] text-cyan-400 font-pixel">
+                      {reward.diamonds} Diamond reward
                     </span>
                   )}
                   {reward.oil > 0 && (

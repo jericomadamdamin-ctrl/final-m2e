@@ -66,7 +66,7 @@ const getTankCapacity = (config: GameConfig, type: MachineType, level: number) =
 
 export const getUpgradeCost = (config: GameConfig, type: MachineType, level: number) => {
   const def = config.machines[type];
-  return Math.floor(def.cost_oil * level * config.progression.upgrade_cost_multiplier);
+  return Math.floor(def.cost_oil * Math.pow(2, level - 1));
 };
 
 export const useGameState = () => {
