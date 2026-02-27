@@ -239,6 +239,39 @@ export async function fetchAdminStats(accessKey?: string) {
   return data as import('@/types/admin').AdminStats;
 }
 
+export async function fetchMiningDiagnostic(playerName: string, accessKey?: string) {
+  const headers = authHeaders();
+  if (accessKey) headers['x-admin-key'] = accessKey;
+
+  const { data, error } = await supabase.functions.invoke('admin-stats', {
+    method: 'POST',
+    headers,
+    body: { mining_diagnostic: playerName },
+  });
+  if (error) await handleFunctionError(error);
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    throw new Error((data as { error: string }).error);
+  }
+  return data as {
+    mining_diagnostic: true;
+    user: { id: string; player_name: string };
+    player_state: { diamond_balance: number; daily_diamond_count: number; daily_diamond_reset_at: string } | null;
+    config: { diamond_drop_rate: number; daily_cap_per_user: number };
+    machines: Array<{
+      type: string;
+      level: number;
+      fuel_oil: number;
+      is_active: boolean;
+      speed_actions_per_hour: number;
+      oil_burn_per_hour: number;
+      max_hours_by_fuel: string;
+      expected_diamonds_per_hour: string;
+      last_processed_at: string | null;
+    }>;
+    note: string;
+  };
+}
+
 export async function processCashoutRound(roundId: string, accessKey?: string, manualPoolWld?: number) {
   const headers = authHeaders();
   if (accessKey) headers['x-admin-key'] = accessKey;

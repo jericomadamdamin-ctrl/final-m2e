@@ -2,6 +2,7 @@
 import { corsHeaders, handleOptions } from '../_shared/cors.ts';
 import { getAdminClient, verifyAdmin, requireUserId } from '../_shared/supabase.ts';
 import { checkRateLimit } from '../_shared/security.ts';
+import { getGameConfig } from '../_shared/mining.ts';
 
 Deno.serve(async (req) => {
     const preflight = handleOptions(req);
@@ -24,6 +25,65 @@ Deno.serve(async (req) => {
         }
 
         const admin = getAdminClient();
+
+        // Mining diagnostic: ?mining_diagnostic=PlayerName or body.mining_diagnostic
+        const url = new URL(req.url || 'http://x/');
+        const qPlayer = url.searchParams.get('mining_diagnostic');
+        const bodyPlayer = req.method === 'POST' ? (await req.json().catch(() => ({}))).mining_diagnostic : null;
+        const diagnosticPlayer = qPlayer || bodyPlayer;
+        if (diagnosticPlayer && typeof diagnosticPlayer === 'string') {
+            const { data: profileList } = await admin
+                .from('profiles')
+                .select('id, player_name, wallet_address')
+                .ilike('player_name', `%${diagnosticPlayer}%`)
+                .limit(5);
+            const match = (profileList || []).find((p: any) =>
+                String(p.player_name).toLowerCase() === diagnosticPlayer.toLowerCase()
+            ) || (profileList || [])[0];
+            if (!match) {
+                return new Response(JSON.stringify({ error: 'User not found', mining_diagnostic: true }), {
+                    status: 404,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+            const targetUserId = match.id;
+                const config = await getGameConfig();
+                const { data: state } = await admin.from('player_state').select('*').eq('user_id', targetUserId).single();
+                const { data: machines } = await admin.from('player_machines').select('*').eq('user_id', targetUserId);
+                const diamondDrop = config.mining.action_rewards.diamond.drop_rate_per_action;
+                const dailyCap = config.diamond_controls.daily_cap_per_user;
+                const levelSpeedMult = config.progression?.level_speed_multiplier ?? 0.1;
+                const getSpeed = (base: number, level: number) => base * (1 + Math.max(0, level - 1) * levelSpeedMult);
+                const machineStats = (machines || []).map((m: any) => {
+                    const def = config.machines[m.type];
+                    if (!def) return { type: m.type, level: m.level, error: 'Unknown machine type' };
+                    const speed = getSpeed(Number(def.speed_actions_per_hour), m.level);
+                    const burn = getSpeed(Number(def.oil_burn_per_hour), m.level);
+                    const maxHours = burn > 0 ? m.fuel_oil / burn : 0;
+                    const expectedDiamondsPerHour = speed * diamondDrop;
+                    return {
+                        type: m.type,
+                        level: m.level,
+                        fuel_oil: m.fuel_oil,
+                        is_active: m.is_active,
+                        speed_actions_per_hour: speed,
+                        oil_burn_per_hour: burn,
+                        max_hours_by_fuel: maxHours.toFixed(1),
+                        expected_diamonds_per_hour: (expectedDiamondsPerHour).toFixed(2),
+                        last_processed_at: m.last_processed_at,
+                    };
+                });
+            return new Response(JSON.stringify({
+                mining_diagnostic: true,
+                user: { id: match.id, player_name: match.player_name },
+                player_state: state ? { diamond_balance: state.diamond_balance, daily_diamond_count: state.daily_diamond_count, daily_diamond_reset_at: state.daily_diamond_reset_at } : null,
+                config: { diamond_drop_rate: diamondDrop, daily_cap_per_user: dailyCap },
+                machines: machineStats,
+                note: 'Mining only runs when user opens app (game-state) or performs action. Fuel limits runtime to ~24h per tank. Expected diamonds = actions * drop_rate (capped by daily_cap).',
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
 
         // Fetch open rounds
         const { data: openRounds } = await admin
