@@ -41,9 +41,7 @@ export const HumanGate = ({ onVerified }: HumanGateProps) => {
       const verificationLevel =
         requestedLevel === 'orb'
           ? VerificationLevel.Orb
-          : requestedLevel === 'device'
-            ? VerificationLevel.Device
-            : undefined;
+          : VerificationLevel.Device;
 
       const { finalPayload } = await MiniKit.commandsAsync.verify({
         action,
@@ -107,9 +105,9 @@ export const HumanGate = ({ onVerified }: HumanGateProps) => {
         <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
           <Shield className="w-6 h-6 text-primary" />
         </div>
-        <h2 className="font-bold text-lg">Human Verification Required</h2>
+        <h2 className="font-bold text-lg">Verification Required</h2>
         <p className="text-sm text-muted-foreground">
-          This game is only for verified humans. Please verify with World ID to continue.
+          Verify with World ID to start playing. Both device and orb verification are accepted.
         </p>
         <Button
           className="w-full glow-green"
