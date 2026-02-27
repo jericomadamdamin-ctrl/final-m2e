@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,14 @@ const Auth = () => {
   const [playerName, setPlayerName] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [autoConnecting, setAutoConnecting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setSession, session } = useSession();
+  const autoAuthAttempted = useRef(false);
 
-  const handleWalletAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const triggerWalletAuth = useCallback(async () => {
+    if (loading) return;
     setLoading(true);
 
     try {
@@ -69,7 +71,6 @@ const Auth = () => {
         // optional
       }
 
-      // Do not send playerName yet. We want to check if they exist.
       const result = await completeWalletAuth(finalPayload, nonce, undefined, username, referralCode || undefined);
 
       setSession({
@@ -80,7 +81,6 @@ const Auth = () => {
         isHumanVerified: result.session.is_human_verified,
       });
 
-      // If new user (default name 'Miner') or explicitly requested setup flow
       if (!result.session.player_name || result.session.player_name === 'Miner') {
         setStep('profile');
       } else {
@@ -99,7 +99,34 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+      setAutoConnecting(false);
     }
+  }, [loading, toast, setSession, navigate, referralCode]);
+
+  // Redirect to game if session is restored (e.g. from IndexedDB async restore)
+  useEffect(() => {
+    if (session && step === 'signin') {
+      navigate('/');
+    }
+  }, [session, step, navigate]);
+
+  // Auto-trigger walletAuth inside World App so returning users don't see the auth page
+  useEffect(() => {
+    if (autoAuthAttempted.current || session || step !== 'signin') return;
+
+    const miniKit = ensureMiniKit();
+    if (miniKit.ok) {
+      autoAuthAttempted.current = true;
+      setAutoConnecting(true);
+      // Small delay to let the UI render before showing World App prompt
+      const timer = setTimeout(() => triggerWalletAuth(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [session, step, triggerWalletAuth]);
+
+  const handleWalletAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await triggerWalletAuth();
   };
 
   const handleProfileSetup = async (e: React.FormEvent) => {
@@ -117,7 +144,6 @@ const Auth = () => {
     try {
       await updateProfile({ playerName: playerName.trim() });
 
-      // Update local session with new name
       if (session) {
         setSession({ ...session, playerName: playerName.trim() });
       }
@@ -145,6 +171,27 @@ const Auth = () => {
     'DeepDriller',
     'OreSeeker',
   ];
+
+  // Show a connecting screen during auto-reauthentication
+  if (autoConnecting && step === 'signin') {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, hsl(120 10% 4% / 0.9), hsl(120 10% 4% / 0.95)), url(${miningBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="text-center space-y-4">
+          <div className="text-5xl animate-float">⛏️</div>
+          <h1 className="font-pixel text-xl text-primary text-glow">Mine to Earn</h1>
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground text-sm">Reconnecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
