@@ -108,7 +108,9 @@ const Index = () => {
               discardMachine(id);
             }}
             maxSlots={player.maxSlots ?? 10}
+            lastDailyClaim={player.lastDailyClaim}
             onBuySlots={buySlots}
+            onRefresh={() => refresh(true)}
           />
         )}
 

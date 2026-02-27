@@ -4,13 +4,14 @@ import { Calendar, Clock, Gift } from 'lucide-react';
 interface DailyClaimCardProps {
   lastClaim: string | null;
   streak: number;
+  rewardAmount?: number;
   onClaim: () => void;
+  loading?: boolean;
 }
 
-const DAILY_OIL_REWARD = 30;
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export const DailyClaimCard = ({ lastClaim, streak, onClaim }: DailyClaimCardProps) => {
+export const DailyClaimCard = ({ lastClaim, streak, rewardAmount = 200, onClaim, loading }: DailyClaimCardProps) => {
   const now = Date.now();
   const lastClaimTime = lastClaim ? new Date(lastClaim).getTime() : 0;
   const timeSinceClaim = now - lastClaimTime;
@@ -46,15 +47,15 @@ export const DailyClaimCard = ({ lastClaim, streak, onClaim }: DailyClaimCardPro
             <span className="text-xs text-muted-foreground">Reward:</span>
             <span className="text-xs bg-secondary/50 px-2 py-0.5 rounded flex items-center gap-1">
               <span>🛢️</span>
-              <span className="text-game-oil font-bold">+{DAILY_OIL_REWARD}</span>
+              <span className="text-game-oil font-bold">+{rewardAmount}</span>
             </span>
           </div>
         </div>
 
         {canClaim ? (
-          <Button size="sm" className="glow-green" onClick={onClaim}>
+          <Button size="sm" className="glow-green" onClick={onClaim} disabled={loading}>
             <Gift className="w-4 h-4 mr-1" />
-            Claim
+            {loading ? 'Claiming...' : 'Claim'}
           </Button>
         ) : (
           <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/30 px-3 py-2 rounded-lg">
@@ -67,4 +68,4 @@ export const DailyClaimCard = ({ lastClaim, streak, onClaim }: DailyClaimCardPro
   );
 };
 
-export { DAILY_OIL_REWARD, COOLDOWN_MS };
+export { COOLDOWN_MS };

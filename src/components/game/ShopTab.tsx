@@ -136,7 +136,14 @@ export const ShopTab = ({ config, oilBalance, machines, maxSlots, onBuy, onBuySl
 
                   {/* Machine Details */}
                   <div className="flex-1">
-                    <h3 className="font-bold mb-1 capitalize">{template.name || `${type} machine`}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold capitalize">{template.name || `${type} machine`}</h3>
+                      {type === 'mini' && (
+                        <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 rounded px-1.5 py-0.5 font-bold uppercase">
+                          1 Free on signup
+                        </span>
+                      )}
+                    </div>
                     <p className="text-muted-foreground text-xs mb-3">
                       Speed, fuel burn, and capacity scale with upgrades.
                     </p>

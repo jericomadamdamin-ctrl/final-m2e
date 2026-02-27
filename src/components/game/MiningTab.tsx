@@ -2,7 +2,10 @@ import { Machine, GameConfig, MachineType } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, Square, Droplet, Plus, Trash2, ArrowUpCircle } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { DailyClaimCard } from './DailyClaimCard';
+import { gameAction } from '@/lib/backend';
+import { useToast as useToastBackend } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,12 +106,14 @@ interface MiningTabProps {
   config: GameConfig;
   oilBalance: number;
   maxSlots: number;
+  lastDailyClaim?: string | null;
   onFuel: (id: string, amount?: number) => void;
   onStart: (id: string) => void;
   onStop?: (id: string) => void;
   onUpgrade?: (id: string) => void;
   onDiscard?: (id: string) => void;
   onBuySlots?: () => void;
+  onRefresh?: () => void;
 }
 
 // Deprecated: used as fallback
@@ -151,8 +156,30 @@ export const MiningTab = ({
   onUpgrade,
   onDiscard,
   maxSlots,
-  onBuySlots
+  lastDailyClaim,
+  onBuySlots,
+  onRefresh,
 }: MiningTabProps) => {
+  const [claimingDaily, setClaimingDaily] = useState(false);
+  const { toast: dailyToast } = useToastBackend();
+
+  const handleDailyClaim = useCallback(async () => {
+    setClaimingDaily(true);
+    try {
+      await gameAction('claim_daily_reward');
+      dailyToast({
+        title: 'Daily Reward Claimed!',
+        description: `You received ${config?.global_game_settings?.daily_oil_reward ?? 200} Oil.`,
+        className: 'glow-green border-primary',
+      });
+      onRefresh?.();
+    } catch (err: any) {
+      dailyToast({ title: 'Claim Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setClaimingDaily(false);
+    }
+  }, [config, dailyToast, onRefresh]);
+
   const machineStats = useMemo(() => {
     return userMachines.map(machine => {
       const def = config.machines[machine.type];
@@ -209,6 +236,15 @@ export const MiningTab = ({
 
   return (
     <div className="space-y-4 pb-4">
+      {/* Daily Oil Claim */}
+      <DailyClaimCard
+        lastClaim={lastDailyClaim ?? null}
+        streak={0}
+        rewardAmount={config?.global_game_settings?.daily_oil_reward ?? 200}
+        onClaim={handleDailyClaim}
+        loading={claimingDaily}
+      />
+
       <div className="flex items-center justify-between px-1">
         <h2 className="font-pixel text-xs text-primary text-glow">Your Machines</h2>
         <div className="flex items-center gap-2">

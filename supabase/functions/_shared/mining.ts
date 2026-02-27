@@ -170,6 +170,20 @@ export async function ensurePlayerState(userId: string): Promise<PlayerStateRow>
     throw new Error('Failed to create player state');
   }
 
+  // Grant a free starter Mini Machine for new players
+  try {
+    await admin.from('player_machines').insert({
+      user_id: userId,
+      type: 'mini',
+      level: 1,
+      fuel_oil: 0,
+      is_active: false,
+    });
+    console.log(`[ensurePlayerState] Granted free starter mini machine to ${userId}`);
+  } catch (e) {
+    console.warn('[ensurePlayerState] Failed to grant starter machine (may already exist):', (e as Error).message);
+  }
+
   return created as PlayerStateRow;
 }
 
