@@ -49,6 +49,32 @@ const Index = () => {
     return null;
   }
 
+  // Show error + retry when initial load failed (no config yet but we have an error)
+  if (gameError && !config) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, hsl(120 10% 4% / 0.9), hsl(120 10% 4% / 0.95)), url(${miningBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="text-center max-w-sm">
+          <p className="text-destructive font-medium mb-2">Unable to load game</p>
+          <p className="text-muted-foreground text-sm mb-4">{gameError}</p>
+          <button
+            type="button"
+            onClick={() => refresh(true)}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Avoid "full-page reload" feeling on background sync / manual refresh.
   // Only show the blocking loader on the very first load (when we have no config yet).
   if (gameLoading && !config) {

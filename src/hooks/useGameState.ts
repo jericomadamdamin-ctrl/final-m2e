@@ -129,6 +129,13 @@ export const useGameState = () => {
       return;
     }
 
+    const token = session.token;
+    if (!token) {
+      setError('Session token missing. Please sign in again.');
+      setLoading(false);
+      return;
+    }
+
     isFetchingRef.current = true;
     const mutationSeqAtStart = mutationSeqRef.current;
     if (showLoading) setLoading(true);
@@ -136,13 +143,13 @@ export const useGameState = () => {
 
     const withTimeout = <T,>(ms: number): Promise<T> =>
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out. Pull to refresh.')), ms)
+        setTimeout(() => reject(new Error('Request timed out. Tap Retry to try again.')), ms)
       );
 
     try {
       const response = await Promise.race([
         fetchGameState(),
-        withTimeout<never>(30000),
+        withTimeout<never>(showLoading ? 28000 : 20000),
       ]);
       // If a mutation started while this refresh was in-flight, ignore the result to avoid stale overwrites.
       if (mutationSeqAtStart !== mutationSeqRef.current) return;
@@ -162,13 +169,18 @@ export const useGameState = () => {
     } catch (err) {
       const message = getErrorMessage(err);
       if (!handleAuthFailure(message)) {
-        setError(message);
+        // Only show persistent error for initial load; avoid banner after home appears
+        if (showLoading || !configRef.current) {
+          setError(message);
+        } else {
+          toast({ title: 'Sync failed', description: message, variant: 'destructive' });
+        }
       }
     } finally {
       isFetchingRef.current = false;
       setLoading(false);
     }
-  }, [handleAuthFailure]);
+  }, [handleAuthFailure, toast]);
 
   // Initial fetch only - runs once
   useEffect(() => {

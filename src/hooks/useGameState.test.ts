@@ -42,7 +42,7 @@ describe('useGameState', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (session.getSession as any).mockReturnValue({ userId: 'user1' });
+        (session.getSession as any).mockReturnValue({ userId: 'user1', token: 'test-token' });
         (backend.fetchGameState as any).mockResolvedValue(mockResponse);
     });
 
