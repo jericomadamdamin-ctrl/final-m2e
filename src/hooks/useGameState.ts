@@ -134,8 +134,16 @@ export const useGameState = () => {
     if (showLoading) setLoading(true);
     setError(null);
 
+    const withTimeout = <T,>(ms: number): Promise<T> =>
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out. Pull to refresh.')), ms)
+      );
+
     try {
-      const response = await fetchGameState();
+      const response = await Promise.race([
+        fetchGameState(),
+        withTimeout<never>(30000),
+      ]);
       // If a mutation started while this refresh was in-flight, ignore the result to avoid stale overwrites.
       if (mutationSeqAtStart !== mutationSeqRef.current) return;
       const mapped = mapState(response);
