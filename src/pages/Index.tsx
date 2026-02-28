@@ -63,9 +63,12 @@ const Index = () => {
         <div className="text-center max-w-sm">
           <p className="text-destructive font-medium mb-2">Unable to load game</p>
           <p className="text-muted-foreground text-sm mb-4">{gameError}</p>
+          <p className="text-muted-foreground text-xs mb-4">
+            If Retry keeps failing, wait a moment and try again or close and reopen the app.
+          </p>
           <button
             type="button"
-            onClick={() => refresh(true)}
+            onClick={() => refresh(true, true)}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90"
           >
             Retry
@@ -111,7 +114,7 @@ const Index = () => {
         backgroundAttachment: 'fixed',
       }}
     >
-      <GameHeader player={player} machines={machines} config={config} onRefresh={refresh} />
+      <GameHeader player={player} machines={machines} config={config} onRefresh={() => refresh(false, true)} />
 
       <main className="flex-1 px-3 pb-24 overflow-y-auto">
         {gameError && (

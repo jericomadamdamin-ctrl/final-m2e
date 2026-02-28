@@ -157,6 +157,7 @@ export const useGameState = () => {
       setConfig(mapped.config);
       setPlayer(mapped.state);
       setMachines(mapped.machines);
+      setError(null); // Clear any previous error (e.g. timeout) when we get valid data
       if (response.profile) {
         setProfile({
           playerName: response.profile.player_name || 'Miner',

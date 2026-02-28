@@ -2,25 +2,38 @@ import { corsHeaders, handleOptions } from '../_shared/cors.ts';
 import { getAdminClient, requireUserId } from '../_shared/supabase.ts';
 import { getGameConfig, processMining } from '../_shared/mining.ts';
 
+const logTiming = (label: string, startMs: number) => {
+  const elapsed = Date.now() - startMs;
+  console.log(`[game-state] ${label}: ${elapsed}ms`);
+};
+
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
-  try {
-    const userId = await requireUserId(req);
+  const totalStart = Date.now();
 
+  try {
+    const authStart = Date.now();
+    const userId = await requireUserId(req);
+    logTiming('auth', authStart);
+
+    const configStart = Date.now();
     const config = await getGameConfig();
-    // Ensure state exists and process mining before returning state
+    logTiming('getGameConfig', configStart);
+
+    const miningStart = Date.now();
     const { state, machines } = await processMining(userId, { config });
+    logTiming('processMining', miningStart);
 
     const admin = getAdminClient();
+    const profileStart = Date.now();
     const { data: profile } = await admin
       .from('profiles')
       .select('player_name, is_admin, is_human_verified, wallet_address, referral_code')
       .eq('id', userId)
       .maybeSingle();
 
-    // Count successful referrals
     const { count: referralCount } = await admin
       .from('referral_bonuses')
       .select('*', { count: 'exact', head: true })
@@ -33,11 +46,13 @@ Deno.serve(async (req) => {
       .order('requested_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    logTiming('profile+referral+cashout', profileStart);
 
-    // Calculate slot info
     const slotConfig = (config as any).slots ?? { base_slots: 10, max_total_slots: 30 };
     const purchasedSlots = Number((state as any).purchased_slots ?? 0);
     const maxSlots = Math.min(slotConfig.base_slots + purchasedSlots, slotConfig.max_total_slots);
+
+    logTiming('total', totalStart);
 
     return new Response(JSON.stringify({
       ok: true,
@@ -54,7 +69,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    const msg = (err as Error).message;
+    console.error('[game-state] error:', msg);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
