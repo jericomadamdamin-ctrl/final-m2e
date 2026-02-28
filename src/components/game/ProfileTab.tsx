@@ -103,7 +103,7 @@ export const ProfileTab = ({ player, machines, config, isAdmin, playerName, refe
       const { state } = await gameAction('claim_daily_reward');
       toast({
         title: "Daily Reward Claimed!",
-        description: `You received ${config?.global_game_settings?.daily_oil_reward ?? 5} Oil.`,
+        description: `You received ${config?.global_game_settings?.daily_oil_reward ?? 200} Oil.`,
         className: "glow-green border-primary"
       });
       // Re-trigger refresh? state is returned so implicit update via react-query mutation if we used it, 

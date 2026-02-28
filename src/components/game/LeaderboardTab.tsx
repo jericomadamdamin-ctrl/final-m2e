@@ -414,7 +414,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
                   )}
                   {reward.oil > 0 && (
                     <span className="text-[9px] text-green-400 font-pixel">
-                      {formatDiamonds(reward.oil)} Oil reward
+                      {reward.oil.toLocaleString()} Oil reward
                     </span>
                   )}
                 </div>

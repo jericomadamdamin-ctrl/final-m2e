@@ -69,5 +69,17 @@ verify_jwt = false
 [functions.season-admin]
 verify_jwt = false
 
+[functions.apply-24h-update]
+verify_jwt = false
+
+[functions.cashout-reconcile]
+verify_jwt = false
+
+[functions.cron-cashout-auto]
+verify_jwt = false
+
+[functions.cron-verify-payments]
+verify_jwt = false
+
 [functions.season-payout]
 verify_jwt = false

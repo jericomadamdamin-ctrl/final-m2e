@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'claim_daily_reward') {
-      const rewardAmount = Math.floor(Number(config.global_game_settings?.daily_oil_reward ?? 5));
+      const rewardAmount = Math.floor(Number(config.global_game_settings?.daily_oil_reward ?? 200));
 
       const { data: rpcResult, error: rpcError } = await admin.rpc('claim_daily_reward', {
         p_user_id: userId,

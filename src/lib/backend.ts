@@ -474,15 +474,20 @@ export async function fetchPlayerState(userId: string, accessKey: string) {
 
 export async function fetchGlobalGameSettings(accessKey: string) {
   try {
-    const { data, error } = await supabase.functions.invoke('global-settings-fetch', {
-      body: { accessKey }
+    const headers = authHeaders();
+    if (accessKey) headers['x-admin-key'] = accessKey;
+    const { data, error } = await supabase.functions.invoke('config-get', {
+      headers,
     });
     if (error) throw error;
-    return data;
+    const cfg = data?.config ?? data;
+    return {
+      diamond_wld_exchange_rate: Number(cfg?.cashout?.diamond_wld_exchange_rate ?? 0.1),
+    };
   } catch (err) {
     console.error('Error fetching global settings:', err);
     return {
-      diamond_wld_exchange_rate: 0.1 // Default fallback
+      diamond_wld_exchange_rate: 0.1,
     };
   }
 }
