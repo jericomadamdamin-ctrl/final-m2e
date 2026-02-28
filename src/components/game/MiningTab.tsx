@@ -1,7 +1,7 @@
 import { Machine, GameConfig, MachineType } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Square, Droplet, Plus, Trash2, ArrowUpCircle } from 'lucide-react';
+import { Play, Square, Droplet, Plus, Trash2, ArrowUpCircle, Lock } from 'lucide-react';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { DailyClaimCard } from './DailyClaimCard';
 import { gameAction } from '@/lib/backend';
@@ -408,28 +408,30 @@ export const MiningTab = ({
         );
       })}
 
-      {/* Render Empty Slot Skeletons */}
-      {Array.from({ length: Math.max(0, maxSlots - userMachines.length) }).map((_, i) => (
+      {/* Single locked slot card shown when a slot is available */}
+      {userMachines.length < maxSlots && (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: Static skeletons based on length
-          key={`empty-slot-${i}`}
-          className="card-game rounded-xl p-4 border-dashed border-2 border-white/5 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
-          onClick={onBuySlots}
+          className={`card-game rounded-xl p-4 border-2 border-dashed border-primary/30 bg-primary/5 transition-colors ${canBuyMoreSlots ? 'cursor-pointer hover:bg-primary/10' : 'opacity-50'}`}
+          onClick={canBuyMoreSlots ? onBuySlots : undefined}
         >
-          <div className="flex items-center gap-4 opacity-40 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded bg-white/5 flex items-center justify-center">
-              <Plus className="w-6 h-6 text-white/20" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center shrink-0">
+              <Lock className="w-6 h-6 text-primary/60" />
             </div>
-            <div className="flex-1">
-              <div className="h-4 w-24 bg-white/10 rounded mb-2" />
-              <div className="h-3 w-32 bg-white/5 rounded" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-primary/80">Slot Locked</p>
+              <p className="text-xs text-muted-foreground">
+                {canBuyMoreSlots
+                  ? `Unlock to add more machines (+${slotConfig.slot_pack_size} slots for ${slotConfig.slot_pack_price_wld} WLD)`
+                  : 'Maximum slots reached'}
+              </p>
             </div>
-            <div className="text-[10px] font-pixel text-primary/50 group-hover:text-primary transition-colors">
-              +{slotConfig.slot_pack_size} SLOTS
-            </div>
+            {canBuyMoreSlots && (
+              <div className="text-[10px] font-pixel text-primary shrink-0">UNLOCK</div>
+            )}
           </div>
         </div>
-      ))}
+      )}
       {/* Discard Alert Dialog */}
       <AlertDialog open={!!discardId} onOpenChange={(open) => !open && setDiscardId(null)}>
         <AlertDialogContent>
