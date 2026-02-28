@@ -45,6 +45,9 @@ const getMultiplier = (base: number, level: number, perLevel: number) => {
   return base * (1 + Math.max(0, level - 1) * perLevel);
 };
 
+const isMissingActionRemainderColumn = (message?: string | null) =>
+  typeof message === 'string' && /action_remainder/i.test(message) && /does not exist/i.test(message);
+
 export async function getGameConfig(): Promise<GameConfig> {
   const admin = getAdminClient();
   const { data: configData, error: configError } = await admin
@@ -349,11 +352,17 @@ export async function processMining(
   }
 
   if (machineUpdates.length > 0) {
-    const { error: upsertError } = await admin
-      .from('player_machines')
-      .upsert(machineUpdates, { onConflict: 'id' });
+    const machineTable = admin.from('player_machines');
+    let { error: upsertError } = await machineTable.upsert(machineUpdates, { onConflict: 'id' });
+
+    if (upsertError && isMissingActionRemainderColumn(upsertError.message)) {
+      console.warn('[processMining] action_remainder column missing; retrying upsert without remainder field');
+      const legacyUpdates = machineUpdates.map(({ action_remainder: _ignored, ...rest }) => rest);
+      ({ error: upsertError } = await machineTable.upsert(legacyUpdates, { onConflict: 'id' }));
+    }
+
     if (upsertError) {
-      throw new Error('Failed to update machines');
+      throw new Error(`Failed to update machines: ${upsertError.message}`);
     }
   }
 

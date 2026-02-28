@@ -100,7 +100,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
     setPastSeason(null);
     try {
       // Try active season first (use status column)
-      let { data: seasonData, error: seasonErr } = await supabase
+      const { data: activeSeasonData } = await supabase
         .from('seasons')
         .select('*')
         .eq('status', 'active')
@@ -108,6 +108,7 @@ export const LeaderboardTab = ({ currentUserId }: LeaderboardTabProps) => {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+      let seasonData = activeSeasonData;
 
       // Fallback to is_active for backward compat
       if (!seasonData) {
