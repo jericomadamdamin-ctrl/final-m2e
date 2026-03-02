@@ -2,7 +2,7 @@ import { Machine, GameConfig, MachineType } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, Square, Droplet, Plus, Trash2, ArrowUpCircle, Lock } from 'lucide-react';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { DailyClaimCard } from './DailyClaimCard';
 import { gameAction } from '@/lib/backend';
 import { useToast as useToastBackend } from '@/hooks/use-toast';
@@ -161,9 +161,12 @@ export const MiningTab = ({
   onRefresh,
 }: MiningTabProps) => {
   const [claimingDaily, setClaimingDaily] = useState(false);
+  const claimingRef = useRef(false);
   const { toast: dailyToast } = useToastBackend();
 
   const handleDailyClaim = useCallback(async () => {
+    if (claimingRef.current) return;
+    claimingRef.current = true;
     setClaimingDaily(true);
     try {
       await gameAction('claim_daily_reward');
@@ -177,6 +180,7 @@ export const MiningTab = ({
       dailyToast({ title: 'Claim Failed', description: err.message, variant: 'destructive' });
     } finally {
       setClaimingDaily(false);
+      claimingRef.current = false;
     }
   }, [config, dailyToast, onRefresh]);
 

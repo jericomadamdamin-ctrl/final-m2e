@@ -316,6 +316,20 @@ Deno.serve(async (req) => {
         throw new Error('Failed to create profile');
       }
 
+      // Give new player a free mini machine to start
+      const { error: machineError } = await admin
+        .from('player_machines')
+        .insert({
+          user_id: userId,
+          type: 'mini',
+          level: 1,
+          fuel_oil: 5,
+        });
+
+      if (machineError) {
+        console.warn(`[AuthComplete] Failed to give initial free machine to user ${userId}:`, machineError);
+      }
+
       profile = createdProfile;
     } else if (player_name && profile?.player_name !== player_name) {
       await admin
