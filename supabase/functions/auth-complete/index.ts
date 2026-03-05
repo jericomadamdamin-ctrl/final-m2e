@@ -338,6 +338,31 @@ Deno.serve(async (req) => {
         .eq('id', userId);
     }
 
+    if (userId) {
+      // Backfill free starter machine for older users who might not have received one
+      const { data: existingMachines } = await admin
+        .from('player_machines')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+
+      if (!existingMachines || existingMachines.length === 0) {
+        const { error: machineError } = await admin
+          .from('player_machines')
+          .insert({
+            user_id: userId,
+            type: 'mini',
+            level: 1,
+            fuel_oil: 5,
+          });
+        if (machineError) {
+          console.warn(`[AuthComplete] Failed to auto-backfill free machine to user ${userId}:`, machineError);
+        } else {
+          console.log(`[AuthComplete] Auto-backfilled free mini machine to user ${userId}`);
+        }
+      }
+    }
+
     if (!userId) throw new Error('User ID not resolved');
 
     const session = await createSession(userId);

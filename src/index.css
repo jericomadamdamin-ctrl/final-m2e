@@ -68,6 +68,7 @@
   body {
     @apply bg-background text-foreground font-orbitron;
     min-height: 100vh;
+    overscroll-behavior: none;
   }
 }
 
