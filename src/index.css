@@ -68,7 +68,25 @@
   body {
     @apply bg-background text-foreground font-orbitron;
     min-height: 100vh;
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    /* Prevents scroll bounce */
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: none;
+    /* Prevents pull-to-refresh and other touch behaviors */
+  }
+
+  html,
+  body {
+    overflow-x: hidden;
+    position: relative;
+    height: 100%;
+  }
+
+  #root {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: none;
   }
 }
 
@@ -82,27 +100,27 @@
   }
 
   .glow-green {
-    box-shadow: 
+    box-shadow:
       0 0 10px hsl(84 81% 44% / 0.4),
       0 0 20px hsl(84 81% 44% / 0.2),
       inset 0 1px 0 hsl(84 100% 70% / 0.2);
   }
 
   .glow-green-strong {
-    box-shadow: 
+    box-shadow:
       0 0 15px hsl(84 81% 44% / 0.6),
       0 0 30px hsl(84 81% 44% / 0.3),
       0 0 45px hsl(84 81% 44% / 0.1);
   }
 
   .glow-gold {
-    box-shadow: 
+    box-shadow:
       0 0 10px hsl(45 100% 50% / 0.4),
       0 0 20px hsl(45 100% 50% / 0.2);
   }
 
   .glow-diamond {
-    box-shadow: 
+    box-shadow:
       0 0 15px hsl(195 100% 70% / 0.5),
       0 0 30px hsl(195 100% 70% / 0.3);
   }
@@ -118,7 +136,7 @@
 
   .pixel-border {
     border: 2px solid hsl(84 81% 44%);
-    box-shadow: 
+    box-shadow:
       inset 2px 2px 0 hsl(84 100% 60% / 0.3),
       inset -2px -2px 0 hsl(84 50% 30% / 0.5);
   }
@@ -136,43 +154,86 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 10px hsl(84 81% 44% / 0.4);
     }
+
     50% {
       box-shadow: 0 0 20px hsl(84 81% 44% / 0.6), 0 0 30px hsl(84 81% 44% / 0.3);
     }
   }
 
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-5px);
     }
   }
 
   @keyframes sparkle {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.6;
     }
   }
 
-  .gem-stone { color: hsl(30 10% 50%); }
-  .gem-bronze { color: hsl(30 80% 45%); }
-  .gem-silver { color: hsl(210 10% 70%); }
-  .gem-gold { color: hsl(45 100% 50%); }
-  .gem-iron { color: hsl(220 15% 50%); }
-  .gem-diamond { color: hsl(195 100% 70%); }
+  .gem-stone {
+    color: hsl(30 10% 50%);
+  }
 
-  .bg-gem-stone { background-color: hsl(30 10% 50%); }
-  .bg-gem-bronze { background-color: hsl(30 80% 45%); }
-  .bg-gem-silver { background-color: hsl(210 10% 70%); }
-  .bg-gem-gold { background-color: hsl(45 100% 50%); }
-  .bg-gem-iron { background-color: hsl(220 15% 50%); }
-  .bg-gem-diamond { background-color: hsl(195 100% 70%); }
+  .gem-bronze {
+    color: hsl(30 80% 45%);
+  }
+
+  .gem-silver {
+    color: hsl(210 10% 70%);
+  }
+
+  .gem-gold {
+    color: hsl(45 100% 50%);
+  }
+
+  .gem-iron {
+    color: hsl(220 15% 50%);
+  }
+
+  .gem-diamond {
+    color: hsl(195 100% 70%);
+  }
+
+  .bg-gem-stone {
+    background-color: hsl(30 10% 50%);
+  }
+
+  .bg-gem-bronze {
+    background-color: hsl(30 80% 45%);
+  }
+
+  .bg-gem-silver {
+    background-color: hsl(210 10% 70%);
+  }
+
+  .bg-gem-gold {
+    background-color: hsl(45 100% 50%);
+  }
+
+  .bg-gem-iron {
+    background-color: hsl(220 15% 50%);
+  }
+
+  .bg-gem-diamond {
+    background-color: hsl(195 100% 70%);
+  }
 }
